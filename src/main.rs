@@ -37,7 +37,7 @@ struct PawFinger {
 const OUTLINE_WIDTH: f32 = 6.0;
 const ARM_WIDTH: f32 = 40.0;
 const PALM_RADIUS: f32 = 50.0;
-const FINGER_RADIUS: f32 = 20.0;
+const FINGER_RADIUS: f32 = 16.0;
 // Colors
 const COLOR_FILL: Color = Color::WHITE;
 const COLOR_OUTLINE: Color = Color::BLACK;
@@ -160,11 +160,14 @@ fn setup(
         });
 
     // Spawn Palm
+    let palm_scale = PALM_RADIUS + OUTLINE_WIDTH;
+    let finger_scale = FINGER_RADIUS + OUTLINE_WIDTH;
+
     commands
         .spawn((
             Mesh2d(mesh_circle.clone()),
             MeshMaterial2d(mat_black.clone()),
-            Transform::from_scale(Vec3::splat(PALM_RADIUS + OUTLINE_WIDTH)),
+            Transform::from_scale(Vec3::splat(palm_scale)),
             PawPalm,
         ))
         .with_children(|parent| {
@@ -172,38 +175,42 @@ fn setup(
             parent.spawn((
                 Mesh2d(mesh_circle.clone()),
                 MeshMaterial2d(mat_white.clone()),
-                Transform::from_xyz(0.0, 0.0, 0.1)
-                    .with_scale(Vec3::splat(PALM_RADIUS / (PALM_RADIUS + OUTLINE_WIDTH))),
+                Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec3::splat(
+                    PALM_RADIUS / palm_scale,
+                )),
             ));
 
             // Fingers
-            let finger_offsets = [
-                Vec3::new(-50.0, 50.0, 0.0),
-                Vec3::new(-20.0, 65.0, 0.0),
-                Vec3::new(20.0, 65.0, 0.0),
-                Vec3::new(50.0, 50.0, 0.0),
+            let fingers_params: [(usize, f32, f32); 4] = [
+                // Index, Angle (deg), Radius (absolute)
+                (0, -55.0, 47.0),
+                (1, -18.0, 48.0),
+                (2, 18.0, 48.0),
+                (3, 55.0, 47.0),
             ];
 
-            for (i, &pos) in finger_offsets.iter().enumerate() {
+            for (i, angle_deg, dist) in fingers_params {
+                let angle_rad = angle_deg.to_radians();
+                let x_abs = dist * angle_rad.sin();
+                let y_abs = dist * angle_rad.cos();
+
+                // Normalized position relative to parent scale
+                // Use z = -0.1 to place fingers behind the palm
+                let base_pos = Vec3::new(x_abs / palm_scale, y_abs / palm_scale, -0.1);
+
                 parent
                     .spawn((
                         Mesh2d(mesh_circle.clone()),
                         MeshMaterial2d(mat_black.clone()),
-                        Transform::from_translation(pos).with_scale(Vec3::splat(
-                            (FINGER_RADIUS + OUTLINE_WIDTH) / (PALM_RADIUS + OUTLINE_WIDTH),
-                        )),
-                        PawFinger {
-                            base_pos: pos,
-                            index: i,
-                        },
+                        Transform::from_translation(base_pos),
+                        PawFinger { base_pos, index: i },
                     ))
-                    .with_children(|finger_parent| {
-                        // Inner white finger
-                        finger_parent.spawn((
+                    .with_children(|f_parent| {
+                        f_parent.spawn((
                             Mesh2d(mesh_circle.clone()),
                             MeshMaterial2d(mat_white.clone()),
                             Transform::from_xyz(0.0, 0.0, 0.1).with_scale(Vec3::splat(
-                                FINGER_RADIUS / (FINGER_RADIUS + OUTLINE_WIDTH),
+                                FINGER_RADIUS / finger_scale,
                             )),
                         ));
                     });
