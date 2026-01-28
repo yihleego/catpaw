@@ -321,8 +321,8 @@ fn animate_paw(
     // Palm animation: slightly squash/stretch
     for mut palm_transform in palm_query.iter_mut() {
         let base_palm_scale = PALM_RADIUS + OUTLINE_WIDTH;
-        let scale_y = base_palm_scale * (1.0 + factor * 0.1);
-        let scale_x = base_palm_scale * (1.0 - factor * 0.05);
+        let scale_y = base_palm_scale * (1.0 + factor * 0.05); // Reduced from 0.1
+        let scale_x = base_palm_scale * (1.0 - factor * 0.025); // Reduced from 0.05
         palm_transform.scale = Vec3::new(scale_x, scale_y, 1.0);
     }
 
@@ -333,33 +333,33 @@ fn animate_paw(
         if factor < 0.0 {
             // Clenching (factor 0 to -1)
             let t = -factor;
-            let clench_offset = original_pos * -0.6 * t; // Move inward
+            let clench_offset = original_pos * -0.3 * t; // Reduced from -0.6 (Move inward)
             transform.translation = original_pos + clench_offset;
-            transform.scale = Vec3::splat(base_scale * (1.0 - 0.2 * t)); // Shrink
+            transform.scale = Vec3::splat(base_scale * (1.0 - 0.1 * t)); // Reduced shrink from 0.2
 
             // Rotate fingers towards center
             let angle = match finger.index {
-                0 => 0.4 * t,
-                1 => 0.15 * t,
-                2 => -0.15 * t,
-                3 => -0.4 * t,
+                0 => 0.2 * t,   // Reduced from 0.4
+                1 => 0.08 * t,  // Reduced from 0.15
+                2 => -0.08 * t, // Reduced from -0.15
+                3 => -0.2 * t,  // Reduced from -0.4
                 _ => 0.0,
             };
             transform.rotation = Quat::from_rotation_z(angle);
         } else {
             // Opening (factor 0 to 1)
             let t = factor;
-            let mut open_offset = original_pos * 0.3 * t; // Move outward
-            open_offset.x *= 1.6; // Spread wider
+            let mut open_offset = original_pos * 0.15 * t; // Reduced from 0.3 (Move outward)
+            open_offset.x *= 1.3; // Slightly reduced spread multiplier from 1.6
             transform.translation = original_pos + open_offset;
-            transform.scale = Vec3::splat(base_scale * (1.0 + 0.15 * t)); // Grow
+            transform.scale = Vec3::splat(base_scale * (1.0 + 0.08 * t)); // Reduced grow from 0.15
 
             // Rotate fingers away from center
             let angle = match finger.index {
-                0 => -0.25 * t,
-                1 => -0.1 * t,
-                2 => 0.1 * t,
-                3 => 0.25 * t,
+                0 => -0.12 * t, // Reduced from -0.25
+                1 => -0.05 * t, // Reduced from -0.1
+                2 => 0.05 * t,  // Reduced from 0.1
+                3 => 0.12 * t,  // Reduced from 0.25
                 _ => 0.0,
             };
             transform.rotation = Quat::from_rotation_z(angle);
