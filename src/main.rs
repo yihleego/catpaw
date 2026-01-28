@@ -2,12 +2,17 @@ use bevy::ecs::system::NonSendMarker;
 use bevy::prelude::*;
 use bevy::window::{CompositeAlphaMode, CursorOptions, PrimaryWindow, WindowLevel};
 use bevy::winit::WINIT_WINDOWS;
+use device_query::{DeviceQuery, DeviceState};
+
+#[derive(Resource)]
+struct GlobalDeviceState(DeviceState);
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(window_plugin()))
         .insert_resource(ClearColor(Color::NONE))
         .init_resource::<PawAnimState>()
+        .insert_resource(GlobalDeviceState(DeviceState::new()))
         .add_systems(Startup, (setup, setup_primary_window))
         .add_systems(Update, (follow_mouse, update_inner_arm, animate_paw))
         .run();
@@ -222,6 +227,7 @@ fn setup(
 fn follow_mouse(
     window_query: Query<&Window>,
     camera_query: Query<(&Camera, &GlobalTransform)>,
+    device_state: Res<GlobalDeviceState>,
     mut arm_query: Query<&mut Transform, (With<PawArm>, Without<PawPalm>, Without<PawBottom>)>,
     mut palm_query: Query<&mut Transform, (With<PawPalm>, Without<PawArm>, Without<PawBottom>)>,
     mut bottom_query: Query<&mut Transform, (With<PawBottom>, Without<PawArm>, Without<PawPalm>)>,
@@ -233,30 +239,35 @@ fn follow_mouse(
         return;
     };
 
-    if let Some(cursor_pos) = window.cursor_position() {
-        if let Ok(mouse_world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
-            let mouse_world_pos: Vec2 = mouse_world_pos;
-            let start_pos = Vec2::new(0.0, -window.height() / 2.0);
-            let diff = mouse_world_pos - start_pos;
-            let length = diff.length();
-            let angle = diff.y.atan2(diff.x) - std::f32::consts::FRAC_PI_2;
+    let mouse = device_state.0.get_mouse();
+    let window_origin = match window.position {
+        WindowPosition::At(pos) => Vec2::new(pos.x as f32, pos.y as f32),
+        _ => Vec2::ZERO,
+    };
+    let cursor_pos = Vec2::new(mouse.coords.0 as f32, mouse.coords.1 as f32) - window_origin;
 
-            for mut transform in palm_query.iter_mut() {
-                transform.translation = mouse_world_pos.extend(1.0);
-                transform.rotation = Quat::from_rotation_z(angle);
-            }
+    if let Ok(mouse_world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
+        let mouse_world_pos: Vec2 = mouse_world_pos;
+        let start_pos = Vec2::new(0.0, -window.height() / 2.0);
+        let diff = mouse_world_pos - start_pos;
+        let length = diff.length();
+        let angle = diff.y.atan2(diff.x) - std::f32::consts::FRAC_PI_2;
 
-            let midpoint = (start_pos + mouse_world_pos) / 2.0;
+        for mut transform in palm_query.iter_mut() {
+            transform.translation = mouse_world_pos.extend(1.0);
+            transform.rotation = Quat::from_rotation_z(angle);
+        }
 
-            for mut transform in arm_query.iter_mut() {
-                transform.translation = midpoint.extend(1.0);
-                transform.rotation = Quat::from_rotation_z(angle);
-                transform.scale = Vec3::new(ARM_WIDTH + OUTLINE_WIDTH, length, 1.0);
-            }
+        let midpoint = (start_pos + mouse_world_pos) / 2.0;
 
-            for mut transform in bottom_query.iter_mut() {
-                transform.translation = start_pos.extend(1.0);
-            }
+        for mut transform in arm_query.iter_mut() {
+            transform.translation = midpoint.extend(1.0);
+            transform.rotation = Quat::from_rotation_z(angle);
+            transform.scale = Vec3::new(ARM_WIDTH + OUTLINE_WIDTH, length, 1.0);
+        }
+
+        for mut transform in bottom_query.iter_mut() {
+            transform.translation = start_pos.extend(1.0);
         }
     }
 }
@@ -284,16 +295,20 @@ fn update_inner_arm(
 }
 
 fn animate_paw(
-    mouse_button: Res<ButtonInput<MouseButton>>,
+    device_state: Res<GlobalDeviceState>,
     mut anim_state: ResMut<PawAnimState>,
     mut palm_query: Query<&mut Transform, (With<PawPalm>, Without<PawFinger>)>,
     mut fingers: Query<(&mut Transform, &PawFinger), Without<PawPalm>>,
     time: Res<Time>,
 ) {
+    let mouse = device_state.0.get_mouse();
+    let left_pressed = mouse.button_pressed.get(1).cloned().unwrap_or(false);
+    let right_pressed = mouse.button_pressed.get(2).cloned().unwrap_or(false);
+
     let mut target = 0.0f32;
-    if mouse_button.pressed(MouseButton::Left) {
+    if left_pressed {
         target = -1.0;
-    } else if mouse_button.pressed(MouseButton::Right) {
+    } else if right_pressed {
         target = 1.0;
     }
 
