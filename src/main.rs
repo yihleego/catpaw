@@ -104,11 +104,11 @@ fn setup_primary_window(
     let (entity, mut window) = primary_window.into_inner();
     WINIT_WINDOWS.with_borrow(|winit_windows| {
         let Some(winit_window) = winit_windows.get_window(entity) else {
-            error!("Primary window找不到: {:?}", entity);
+            error!("Primary window not found: {:?}", entity);
             return;
         };
         let Some(current_monitor) = winit_window.current_monitor() else {
-            error!("当前显示器找不到: {:?}", entity);
+            error!("Current monitor not found: {:?}", entity);
             return;
         };
 
@@ -122,7 +122,7 @@ fn setup_primary_window(
         let window_top = monitor_pos.y;
 
         debug!(
-            "当前屏幕: {:?}, 屏幕尺寸: {}x{}, 窗口新尺寸: {}x{}, 窗口新坐标: {}x{}",
+            "Current monitor: {:?}, Monitor size: {}x{}, Window new size: {}x{}, Window new pos: {}x{}",
             current_monitor.name(),
             monitor_size.width,
             monitor_size.height,
