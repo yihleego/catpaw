@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT"
 authors = ["Leego <i@leego.io>"]
 keywords = ["gamedev", "game", "bevy"]
-repository = "https://github.com/leego/cat-paw"
+repository = "https://github.com/yihleego/cat-paw"
 
 [dependencies]
 bevy = { version = "0.18", default-features = false, features = ["2d"] }
@@ -23,7 +23,7 @@ opt-level = 1
 opt-level = 3
 
 [profile.release]
-opt-level = 3
+opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true

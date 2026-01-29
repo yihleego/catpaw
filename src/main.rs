@@ -301,47 +301,21 @@ fn follow_mouse(
     if let Ok(mouse_world_pos) = camera.viewport_to_world_2d(camera_transform, cursor_pos) {
         let mouse_world_pos: Vec2 = mouse_world_pos;
         let start_pos = Vec2::new(0.0, -window.height() / 2.0); // Start from bottom center
-
-        // Calculate offset for "second finger left front" (Index 1)
-        // Finger 1: Angle -23.0 deg, Radius 50.0
-        let finger_angle = -23.0f32.to_radians();
-        let finger_dist = 50.0f32;
-        let finger_center = Vec2::new(finger_dist * finger_angle.sin(), finger_dist * finger_angle.cos());
-
-        // Offset from finger center to "front left"
-        // Finger radius is 25.0.
-        // We pick a point slightly left and up from the center of the finger.
-        let finger_tip_offset = Vec2::new(-15.0, 20.0);
-        let local_offset = finger_center + finger_tip_offset;
-
-        // Iteratively solve for palm position and angle
-        // We want: PalmPos + rotated(local_offset) = MousePos
-        // And: Angle = angle_between(StartPos, PalmPos)
-        let mut palm_pos = mouse_world_pos; // Initial guess
-        let mut angle = 0.0;
-
-        for _ in 0..2 {
-            let diff = palm_pos - start_pos;
-            angle = diff.y.atan2(diff.x) - std::f32::consts::FRAC_PI_2;
-            let rotation = Quat::from_rotation_z(angle);
-            let world_offset = rotation * local_offset.extend(0.0);
-            palm_pos = mouse_world_pos - world_offset.truncate();
-        }
-
-        let diff = palm_pos - start_pos;
+        let diff = mouse_world_pos - start_pos;
         let length = diff.length();
+        let angle = diff.y.atan2(diff.x) - std::f32::consts::FRAC_PI_2;
 
         for mut transform in palm_query.iter_mut() {
-            transform.translation = palm_pos.extend(1.0);
+            transform.translation = mouse_world_pos.extend(1.0);
             transform.rotation = Quat::from_rotation_z(angle);
         }
 
-        let midpoint = (start_pos + palm_pos) / 2.0;
+        let midpoint = (start_pos + mouse_world_pos) / 2.0;
 
         for mut transform in arm_query.iter_mut() {
             transform.translation = midpoint.extend(1.0);
             transform.rotation = Quat::from_rotation_z(angle);
-            // Stretch arm to reach the palm
+            // Stretch arm to reach the mouse
             transform.scale = Vec3::new(ARM_WIDTH + OUTLINE_WIDTH, length, 1.0);
         }
 
