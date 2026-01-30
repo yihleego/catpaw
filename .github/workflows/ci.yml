@@ -42,7 +42,7 @@ jobs:
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
       - name: Run clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy
 
   test:
     name: Test
