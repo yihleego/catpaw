@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 env:
+  GAME_APP_NAME: CatPaw
   GAME_EXECUTABLE_NAME: catpaw
-  GAME_OSX_APP_NAME: CatPaw
   CARGO_REGISTRIES_CRATES_IO_PROTOCOL: sparse
 
 jobs:
@@ -41,22 +41,18 @@ jobs:
           SDKROOT=$(xcrun -sdk macosx --show-sdk-path) cargo build --release --target=${{ matrix.target }}
       - name: Create release
         run: |
-          APP_NAME="${{ env.GAME_OSX_APP_NAME }}"
-          EXECUTABLE_NAME="${{ env.GAME_EXECUTABLE_NAME }}"
-          STAGING="build/macos/staging"
-          rm -rf "$STAGING"
-          mkdir -p "$STAGING"
-          cp -r "build/macos/src/${APP_NAME}.app" "$STAGING/"
-          cp "target/${{ matrix.target }}/release/${EXECUTABLE_NAME}" "$STAGING/${APP_NAME}.app/Contents/MacOS/"
-          strip "$STAGING/${APP_NAME}.app/Contents/MacOS/${EXECUTABLE_NAME}"
-          ln -s /Applications "$STAGING/"
-          hdiutil create -fs HFS+ -volname "${APP_NAME}" -srcfolder "$STAGING" "${EXECUTABLE_NAME}${{ matrix.suffix }}.dmg"
+          mkdir -p build/macos/src/${{ env.GAME_APP_NAME }}.app/Contents/MacOS
+          cp target/${{ matrix.target }}/release/${{ env.GAME_EXECUTABLE_NAME }} build/macos/src/${{ env.GAME_APP_NAME }}.app/Contents/MacOS/
+          strip build/macos/src/${{ env.GAME_APP_NAME }}.app/Contents/MacOS/${{ env.GAME_EXECUTABLE_NAME }}
+          codesign --force --deep --sign - build/macos/src/${{ env.GAME_APP_NAME }}.app
+          ln -s /Applications build/macos/src/
+          hdiutil create -fs HFS+ -volname "${{ env.GAME_APP_NAME }}" -srcfolder build/macos/src ${{ env.GAME_EXECUTABLE_NAME }}.dmg
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.GAME_EXECUTABLE_NAME }}${{ matrix.suffix }}.dmg
-          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ steps.tag.outputs.tag }}${{ matrix.suffix }}.dmg
+          file: ${{ env.GAME_EXECUTABLE_NAME }}.dmg
+          asset_name: ${{ env.GAME_APP_NAME }}_${{ steps.tag.outputs.tag }}_macOS_${{ matrix.suffix }}.dmg
           tag: ${{ github.ref }}
           overwrite: true
 
@@ -81,12 +77,12 @@ jobs:
         uses: vimtor/action-zip@v1
         with:
           files: target/release/${{ env.GAME_EXECUTABLE_NAME }}.exe
-          dest: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
+          dest: ${{ env.GAME_EXECUTABLE_NAME }}.zip
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
-          asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ steps.tag.outputs.tag }}_windows.zip
+          file: ${{ env.GAME_EXECUTABLE_NAME }}.zip
+          asset_name: ${{ env.GAME_APP_NAME }}_${{ steps.tag.outputs.tag }}_Windows.zip
           tag: ${{ github.ref }}
           overwrite: true
